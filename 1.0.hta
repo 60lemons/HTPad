@@ -1,0 +1,179 @@
+
+<!DOCTYPE HTML><html><head>
+<HTA:APPLICATION ID="oHTA" APPLICATIONNAME="HTPad" ICON="#">
+<script language='vbscript'>
+
+On Error Resume Next
+Dim Filename, edited, appname
+appname = "HTPad 1.0"
+
+Function updatetitle
+	If Filename = "" Then
+		document.Title = "Untitled - " & appname
+	Else
+		document.Title = filename & " - " & appname
+	End If
+End Function
+
+Function BrowseFile
+	Dim shell, filepath, filename, ask, fso
+	Set shell = CreateObject("Shell.Application")
+	Set ask = shell.BrowseForFolder(0, "FOLDER :", &H4000, 0)
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	If (not ask is Nothing) Then
+		filepath = ask.self.path
+		filename = Inputbox("FILE NAME :")
+		If not IsEmpty(filename) Then
+			Browsefile = filepath & "\" & filename
+		Else
+			BrowseFile = vbnull
+		End If
+	Else
+		Browsefile = vbnull
+	End If
+	Set shell = Nothing
+	Set filepath = Nothing
+	Set filename = Nothing
+	Set ask = Nothing
+	Set fso = Nothing
+End Function
+
+Function init
+	updatetitle
+End Function
+
+Function Openfile
+	Dim fso, fo, pathask
+	pathask = Browsefile
+	If (Not pathask = vbnull) Then
+		filename = pathask
+		Dim cancel
+		If (edited = 1) Then
+			Dim answer
+			answer = msgbox("Save file?", 3+48)
+			If (answer = 6) Then
+				Save
+			ElseIf (answer = 7) Then
+			Else
+				cancel = 1
+			End If
+		End If
+		If (cancel <> 1) Then
+			Set fso = CreateObject("Scripting.FileSystemObject")
+			If fso.FileExists(filename & ".tmp") Then
+				Msgbox("File hasn't been saved. Loading last copy.")
+				Set fo = fso.OpenTextFile(filename & ".tmp", 1, 0)
+				If (fo.AtEndOfStream <> true) Then
+					mainframe.value = fo.Readall()
+				End If
+				fo.Close
+				cancel = 1
+			End If
+			If (cancel <> 1) Then
+				Set fso = CreateObject("Scripting.FileSystemObject")
+				If fso.FileExists(filename) Then
+					Set fo = fso.OpenTextFile(pathask, 1, 0)
+					If (fo.AtEndOfStream <> true) Then
+						mainframe.value = fo.Readall()
+						fo.Close
+					End If
+				End If
+				edited = 0
+				updatetitle
+			End If
+		End If
+	End If
+End function
+
+Function Newfile
+	Dim cancel
+	cancel = 0
+	If (edited = 1) Then
+		Dim answer
+		answer = msgbox("Save file?", 3+48)
+		If (answer = 6) Then
+			Save
+		ElseIf (answer = 7) Then
+		Else
+			cancel = 1
+		End If
+	End If
+	If (cancel <> 1) Then
+		Filename = ""
+		Mainframe.InnerHTML = ""
+		edited = 0
+	End If
+	updatetitle
+End Function
+
+Function Save
+	If (not filename = "") Then
+		Dim fso, fo
+		Set fso = CreateObject("Scripting.FileSystemObject")
+		Set fo = fso.CreateTextFile(filename, true, false)
+		fo.Write(mainframe.InnerHTML)
+		fo.Close
+		If (fso.FileExists(filename & ".tmp")) Then
+			fso.DeleteFile(filename & ".tmp")
+		End If
+		edited = 0
+	Else
+		SaveAs
+	End If
+End Function
+
+Function SaveAs
+	Dim askpath
+	askpath = BrowseFile
+	If (not askpath = vbnull) Then
+		filename = askpath
+		Save
+		updatetitle
+	Else
+		msgbox("Please enter something")
+	End If
+End Function
+
+Function asksave
+	Dim cancel
+	If (edited = 1) Then
+		Dim answer
+		answer = msgbox("Save file?", 3+48)
+		If (answer = 6) Then
+			Save
+		ElseIf (answer = 7) Then
+			Dim fso
+			Set fso = CreateObject("Scripting.FileSystemObject")
+			If (fso.FileExists(filename & ".tmp")) Then
+				fso.DeleteFile(filename & ".tmp")
+			End If
+		Else
+			cancel = 1
+		End If
+	End If
+	If (cancel <> 1) Then
+		Self.Close()
+	End If
+End Function
+
+Function Tempfile
+	edited = 1
+	If (not filename = "") Then
+		Dim fso, fo
+		Set fso = CreateObject("Scripting.FileSystemObject")
+		Set fo = fso.CreateTextFile(filename & ".tmp", true, false)
+		fo.Write(mainframe.InnerHTML)
+		fo.close
+	End If
+End Function
+
+</script>
+</head><body onload="init">
+<input type='submit' value='Open' onclick='Openfile'>
+<input type='submit' value='New' onclick='Newfile'>
+<input type='submit' value='Save' onclick='Save'>
+<input type='submit' value='Save As' onclick='SaveAs'>
+<input type='submit' value='Exit' onclick='asksave'>
+<br>
+<textarea id='mainframe' onkeyup='tempfile' onchange='tempfile' rows=22 cols=90></textarea>
+</body></html>
